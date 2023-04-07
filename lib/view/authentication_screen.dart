@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:news_app_quantum/widgets/buil_register_tab.dart';
-import 'package:news_app_quantum/widgets/build_login_tab.dart';
+import 'package:news_app_quantum/imports.dart';
 
 class AuthenticationScreen extends StatefulWidget {
   @override
@@ -10,6 +9,7 @@ class AuthenticationScreen extends StatefulWidget {
 
 class _AuthenticationScreenState extends State<AuthenticationScreen>
     with SingleTickerProviderStateMixin {
+
   late final _tabController = TabController(length: 2, vsync: this);
 
   Decoration tabBarDecoration = const BoxDecoration(

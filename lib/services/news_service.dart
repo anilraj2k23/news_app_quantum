@@ -2,9 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:news_app_quantum/models/news_model.dart';
-import 'package:news_app_quantum/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:news_app_quantum/imports.dart';
 
 class ApiManagement {
   static Future<NewsModel> fetchNews(BuildContext context) async {

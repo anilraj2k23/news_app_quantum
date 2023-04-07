@@ -1,12 +1,13 @@
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:news_app_quantum/models/news_model.dart';
-import 'package:news_app_quantum/services/news_service.dart';
-import 'package:news_app_quantum/utils/date_calculate_function.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:news_app_quantum/imports.dart';
 
 class ScreenHome extends StatefulWidget {
   const ScreenHome({Key? key}) : super(key: key);
@@ -16,6 +17,7 @@ class ScreenHome extends StatefulWidget {
 }
 
 class _ScreenHomeState extends State<ScreenHome> {
+  User? _user;
   late SharedPreferences prefs;
   late ConnectivityResult connectivityResult;
   String searchQuery = '';
@@ -25,6 +27,7 @@ class _ScreenHomeState extends State<ScreenHome> {
     super.initState();
     initPrefs();
     initConnectivity();
+    _user = FirebaseAuth.instance.currentUser;
   }
 
   Future<void> initPrefs() async {
@@ -39,44 +42,62 @@ class _ScreenHomeState extends State<ScreenHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: buildDrawer(context),
       appBar: AppBar(
-        title: Text('News Highlights'),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              color: Colors.blueAccent,
-              height: 50.h,
+        backgroundColor: Colors.blueAccent,
+        title: const Text('News Highlights'),
+        bottom: PreferredSize(
+            preferredSize: Size(double.infinity, 0.06.sh),
+            child: Container(
+              color: Colors.white,
+              height: 55.h,
               width: double.infinity,
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: 'Search news...',
-                    hintStyle: TextStyle(color: Colors.white70),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Colors.blueAccent,
+                      size: 25.r,
+                      shadows: [
+                        Shadow(
+                            color: Colors.black38,
+                            blurRadius: 15,
+                            offset: Offset(-1.w, 3.h))
+                      ],
+                    ),
+                    hintText: 'Search in feed',
+                    hintStyle: TextStyle(
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 18.sp),
                     border: InputBorder.none,
                   ),
-                  style: TextStyle(color: Colors.white),
+
                   onChanged: (value) => setState(() => searchQuery = value),
                 ),
               ),
-            ),
+            )),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
             Expanded(
               child: FutureBuilder<NewsModel?>(
                 future: fetchData(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(
+                    return const Center(
                       child: CircularProgressIndicator(),
                     );
                   } else if (snapshot.hasError) {
-                    return Center(
+                    return const Center(
                       child: Text(
                           'An unexpected error occurred. Please try again later.'),
                     );
                   } else if (snapshot.data == null) {
-                    return Center(
+                    return const Center(
                       child: Text('No data available.'),
                     );
                   } else {
@@ -118,7 +139,7 @@ class _ScreenHomeState extends State<ScreenHome> {
                                         ),
                                         Text(
                                           filteredNews[index].source.name,
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.black54),
                                         ),
@@ -154,13 +175,16 @@ class _ScreenHomeState extends State<ScreenHome> {
                                         ),
                                       ),
                                     )),
-                                Positioned(top: 20.h,right: 15.w,
+                                Positioned(
+                                    top: 20.h,
+                                    right: 15.w,
                                     child: Image.network(
-                                  filteredNews[index].urlToImage ?? '',
-                                  width: 100.w,
-                                  height: 100.h,
-                                  errorBuilder:(ctx, obj, trace)=>const SizedBox(),
-                                ))
+                                      filteredNews[index].urlToImage ?? '',
+                                      width: 100.w,
+                                      height: 100.h,
+                                      errorBuilder: (ctx, obj, trace) =>
+                                          const SizedBox(),
+                                    ))
                               ],
                             ),
                           ),
@@ -173,6 +197,58 @@ class _ScreenHomeState extends State<ScreenHome> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Drawer buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        children: [
+          UserAccountsDrawerHeader(
+              decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [Colors.blueAccent, Colors.brown])),
+              currentAccountPicture: CircleAvatar(
+                  foregroundImage: NetworkImage(_user?.photoURL ??
+                      'https://cdn.pixabay.com/photo/2019/08/11/18/59/icon-4399701_640.png')),
+              accountName: Text(_user?.displayName ?? ''),
+              accountEmail: Text('ID: ${_user?.uid.substring(0, 3)}')),
+          Padding(
+              padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 10.w),
+              child: ListTile(
+                leading: Icon(
+                  Icons.logout_rounded,
+                  size: 29.r,
+                ),
+                title: Text(
+                  'Log Out',
+                  style: TextStyle(fontSize: 18.sp),
+                ),
+                onTap: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  prefs.clear();
+                  try {
+                    final currentUser = FirebaseAuth.instance.currentUser;
+                    if (currentUser != null) {
+                      {
+                        await FirebaseAuth.instance.signOut();
+                        await GoogleSignIn().signOut();
+                      }
+                    } else {
+                      Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => AuthenticationScreen()));
+                    }
+                  } catch (e) {
+                    if (kDebugMode) {
+                      print(e.toString());
+                    }
+                  }
+                },
+              )),
+        ],
       ),
     );
   }

@@ -8,6 +8,8 @@ String timeAgo(DateTime date) {
     return '${difference.inMinutes} minutes ago';
   } else if (difference.inHours < 24) {
     return '${difference.inHours} hours ago';
+  } else if (difference.inDays == 1) {
+    return '1 day ago';
   } else if (difference.inDays < 7) {
     return '${difference.inDays} days ago';
   } else if (difference.inDays < 30) {
